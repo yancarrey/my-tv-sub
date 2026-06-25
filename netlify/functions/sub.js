@@ -6,6 +6,7 @@ exports.handler = async function(event, context) {
     const usersConfig = {
         "ruanshiwen": "2026-06-26",
         "fengjuntian": "2027-07-01",
+        "weixinhongge": "2027-07-01",
         "huangwenshan": "2027-07-01"
     };
 
