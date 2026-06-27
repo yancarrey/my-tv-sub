@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 
+// ★ 用户名单（注意：huangwenshan补回来了，weixinhongge去掉重复）
 const usersConfig = {
     "ruanshiwen":   "2026-06-26",
     "fengjuntian":  "2027-07-01",
@@ -13,14 +14,18 @@ const GIST_ID    = process.env.GIST_ID;
 const GIST_TOKEN = process.env.GITHUB_TOKEN;
 const UPSTREAM_URL = "https://wakenew.pages.dev/31cd326f-23f5-4d09-a9fd-2016a13480a4/sub";
 
-// 到期检查（北京时间当天23:59:59失效）
+// ============================================================
+// 到期检查（北京时间当天23:59:59 = UTC 15:59:59）
+// ============================================================
 function isExpired(userId) {
     if (!usersConfig[userId]) return true;
     const expireUTC = new Date(usersConfig[userId] + 'T15:59:59Z');
     return new Date() > expireUTC;
 }
 
+// ============================================================
 // 设备指纹
+// ============================================================
 function getFingerprint(event) {
     const ip = (
         event.headers['x-forwarded-for'] ||
@@ -34,7 +39,9 @@ function getFingerprint(event) {
         .digest('hex').slice(0, 16);
 }
 
+// ============================================================
 // 读Gist
+// ============================================================
 async function readGist() {
     if (!GIST_ID || !GIST_TOKEN) return {};
     try {
@@ -48,10 +55,14 @@ async function readGist() {
         const data = await res.json();
         const content = Object.values(data.files)[0].content;
         return JSON.parse(content);
-    } catch(e) { return {}; }
+    } catch(e) {
+        return {};
+    }
 }
 
+// ============================================================
 // 写Gist
+// ============================================================
 async function writeGist(deviceData) {
     if (!GIST_ID || !GIST_TOKEN) return;
     await fetch(`https://api.github.com/gists/${GIST_ID}`, {
@@ -63,14 +74,18 @@ async function writeGist(deviceData) {
             'User-Agent': 'netlify-fn'
         },
         body: JSON.stringify({
-            files: { "devices.json": {
-                content: JSON.stringify(deviceData, null, 2)
-            }}
+            files: {
+                "devices.json": {
+                    content: JSON.stringify(deviceData, null, 2)
+                }
+            }
         })
     });
 }
 
-// 设备限制
+// ============================================================
+// 设备限制（最多2台）
+// ============================================================
 async function checkDevice(userId, fingerprint) {
     const data = await readGist();
     if (!data[userId]) {
@@ -89,10 +104,15 @@ async function checkDevice(userId, fingerprint) {
     return { ok: true };
 }
 
-// 拉取真实节点（保持原来能用的逻辑不变）
+// ============================================================
+// 拉取真实节点（原来能用的逻辑，完全保留）
+// ============================================================
 async function getRealNode() {
     const response = await fetch(UPSTREAM_URL, {
-        headers: { "User-Agent": "clash-meta", "Accept": "*/*" }
+        headers: {
+            "User-Agent": "clash-meta",
+            "Accept": "*/*"
+        }
     });
     if (!response.ok) throw new Error(`上游错误: ${response.status}`);
 
@@ -100,15 +120,19 @@ async function getRealNode() {
     let nodeText = rawContent;
     try {
         const decoded = Buffer.from(rawContent.trim(), 'base64').toString('utf-8');
-        if (decoded.includes('vless://') || decoded.includes('trojan://') || decoded.includes('ss://')) {
+        if (
+            decoded.includes('vless://') ||
+            decoded.includes('trojan://') ||
+            decoded.includes('ss://')
+        ) {
             nodeText = decoded;
         }
     } catch(e) {}
 
-    // 去ECH参数
+    // 去掉ECH参数（安卓TV兼容）
     const cleaned = nodeText.replace(/&ech=[^&\n#]+/g, '');
 
-    // 取所有节点
+    // 解析所有节点
     const nodes = cleaned.split('\n')
         .map(l => l.trim())
         .filter(l =>
@@ -119,21 +143,28 @@ async function getRealNode() {
 
     if (nodes.length === 0) throw new Error('无有效节点');
 
-    // 随机选一个真实节点返回
+    // 随机返回一个节点（只返回1个，用户看不到其他节点）
     return nodes[Math.floor(Math.random() * nodes.length)];
 }
 
-// ★ 生成一个假节点（到期用户看到这个，能ping但无法翻墙）
+// ============================================================
+// 生成假节点（到期用户专用，连接必然失败）
+// ★ 关键：用户刷新后拿到假节点，无法翻墙
+// 用户不刷新 = 用本地缓存 = 还能用（无法避免）
+// 用户刷新或开机自动刷新 = 拿到假节点 = 立刻失效
+// ============================================================
 function getFakeNode(userId) {
-    // 用一个真实存在但拒绝连接的地址
-    // 用户v2rayNG显示"连接失败"，不会显示到期提示
-    // 这样用户以为是网络问题，不知道是你控制的
-    const fakeUUID = crypto.createHash('md5').update(userId).digest('hex')
+    const fakeUUID = crypto.createHash('md5')
+        .update(userId + 'fake')
+        .digest('hex')
         .replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5');
-    return `vless://${fakeUUID}@1.1.1.1:443?encryption=none&security=tls&type=ws&path=%2F#已过期`;
+    // 指向一个必然超时的地址
+    return `vless://${fakeUUID}@192.0.2.1:443?encryption=none&security=tls&type=ws&path=%2F#订阅已到期`;
 }
 
+// ============================================================
 // 主入口
+// ============================================================
 exports.handler = async function(event) {
     const user = event.queryStringParameters?.user;
 
@@ -148,11 +179,10 @@ exports.handler = async function(event) {
 
     // 2. ★ 到期检查
     if (isExpired(user)) {
-        // 返回假节点而不是403
-        // 这样v2rayNG不会报错，但连不上网
-        // 用户下次刷新订阅还是假节点，直到续费
+        // 返回假节点（200状态码让v2rayNG接受）
+        // 假节点连接超时，用户无法翻墙
+        // 节点名字显示"订阅已到期"提醒用户
         const fakeNode = getFakeNode(user);
-        const encoded = Buffer.from(fakeNode).toString('base64');
         return {
             statusCode: 200,
             headers: {
@@ -160,25 +190,27 @@ exports.handler = async function(event) {
                 'Access-Control-Allow-Origin': '*',
                 'profile-update-interval': '1'
             },
-            body: encoded
+            body: Buffer.from(fakeNode).toString('base64')
         };
     }
 
-    // 3. 设备限制
-    const fp = getFingerprint(event);
-    const check = await checkDevice(user, fp);
-    if (!check.ok) {
-        return {
-            statusCode: 403,
-            headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-            body: check.msg
-        };
+    // 3. 设备限制（需要GIST_ID和GITHUB_TOKEN环境变量）
+    // 如果没有配置Gist，跳过设备限制直接返回节点
+    if (GIST_ID && GIST_TOKEN) {
+        const fp = getFingerprint(event);
+        const check = await checkDevice(user, fp);
+        if (!check.ok) {
+            return {
+                statusCode: 403,
+                headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+                body: check.msg
+            };
+        }
     }
 
-    // 4. 返回真实节点
+    // 4. ★ 返回真实节点（未到期用户，正常可用）
     try {
         const node = await getRealNode();
-        const encoded = Buffer.from(node).toString('base64');
         return {
             statusCode: 200,
             headers: {
@@ -186,7 +218,7 @@ exports.handler = async function(event) {
                 'Access-Control-Allow-Origin': '*',
                 'profile-update-interval': '1'
             },
-            body: encoded
+            body: Buffer.from(node).toString('base64')
         };
     } catch(e) {
         return {
