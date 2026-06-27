@@ -9,7 +9,9 @@ const usersConfig = {
     "ruanshiwen":   "2026-06-26",
     "fengjuntian":  "2027-07-01",
     "weixinhongge": "2027-07-01",
-    "huangwenshan": "2027-07-01"
+    "alan": "2027-07-01",
+    "weixinhongge": "2027-07-01",
+    "yedeqiang": "2027-07-01"
 };
 
 const MAX_DEVICES = 2;
