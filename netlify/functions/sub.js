@@ -2,7 +2,7 @@ const crypto = require('crypto');
 
 // ★ 用户名单（注意：huangwenshan补回来了，weixinhongge去掉重复）
 const usersConfig = {
-    "ruanshiwen":   "2026-06-26",
+    "ruanshiwen":   "2026-06-28",
     "fengjuntian":  "2027-07-01",
     "weixinhongge": "2027-07-01",
     "huangwenshan": "2027-07-01",
