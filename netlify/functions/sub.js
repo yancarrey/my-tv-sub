@@ -7,7 +7,7 @@ const crypto = require('crypto');
 
 // ★ 修改点1：客户名单和到期时间（和你原来一样，不变）
 const usersConfig = {
-    "ruanshiwen":   "2026-06-26",
+    "ruanshiwen":   "2026-06-25",
     "fengjuntian":  "2027-07-01",
     "weixinhongge": "2027-07-01",
      "yedeqiang": "2027-07-01",
