@@ -6,7 +6,7 @@
 const crypto = require('crypto');
 
 const usersConfig = {
-    "ruanshiwen":   "2026-06-26",
+    "ruanshiwen":   "2026-06-28",
     "fengjuntian":  "2027-07-01",
     "weixinhongge": "2027-07-01",
     "huangwenshan": "2027-07-01",
