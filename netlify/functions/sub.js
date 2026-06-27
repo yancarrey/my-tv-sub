@@ -4,10 +4,13 @@ exports.handler = async function(event, context) {
 
     // 2. 配置你的客户名单和到期时间 (年-月-日)
     const usersConfig = {
-        "ruanshiwen": "2026-06-26",
-        "fengjuntian": "2027-07-01",
+        "ruanshiwen":   "2026-06-29",
+        "fengjuntian":  "2027-07-01",
         "weixinhongge": "2027-07-01",
-        "huangwenshan": "2027-07-01"
+        "alan": "2027-07-01",
+        "yanzhisheng": "2027-07-01",
+        "huangwenshan": "2027-07-01",
+        "yedeqiang": "2027-07-01"
     };
 
     // 如果用户名不存在
