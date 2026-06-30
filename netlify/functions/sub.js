@@ -10,6 +10,7 @@ exports.handler = async function(event) {
         "huangwenshan": "2027-07-01",
         "alan":         "2027-07-01",
         "yanzhisheng":  "2027-07-01",
+        "liuchensheng":  "2027-07-01",
         "yedeqiang":    "2027-07-01"
     };
 
